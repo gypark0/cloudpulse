@@ -28,6 +28,7 @@ dependencies {
 
     implementation platform("software.amazon.awssdk:bom:2.25.60")
     implementation "software.amazon.awssdk:ec2"
+    implementation "software.amazon.awssdk:cloudwatch"
 }
 
 tasks.named('test') {
