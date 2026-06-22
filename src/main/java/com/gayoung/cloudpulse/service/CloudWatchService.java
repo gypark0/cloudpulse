@@ -77,7 +77,7 @@ public class CloudWatchService {
             String state
     ) {
         Instant endTime = Instant.now();
-        Instant startTime = endTime.minus(24, ChronoUnit.HOURS);
+        Instant startTime = endTime.minus(1, ChronoUnit.HOURS);
 
         Dimension instanceDimension = Dimension.builder()
                 .name("InstanceId")
@@ -92,7 +92,7 @@ public class CloudWatchService {
                 .unit(StandardUnit.PERCENT)
                 .startTime(startTime)
                 .endTime(endTime)
-                .period(3600)
+                .period(300)
                 .build();
 
         GetMetricStatisticsResponse response = cloudWatchClient.getMetricStatistics(request);
@@ -125,8 +125,12 @@ public class CloudWatchService {
     }
 
     private String judgeStatus(double averageCpu, double maxCpu) {
-        if (maxCpu > 80) {
+        if (averageCpu >= 80) {
             return "과부하 위험";
+        }
+
+        if (averageCpu >= 60 || maxCpu >= 90) {
+            return "주의";
         }
 
         if (averageCpu < 5) {
