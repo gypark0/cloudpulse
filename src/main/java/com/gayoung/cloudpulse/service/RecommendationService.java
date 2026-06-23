@@ -28,14 +28,27 @@ public class RecommendationService {
     }
 
     public List<RecommendationResponse> getRecommendations() {
-        List<RecommendationResponse> recommendations = new ArrayList<>();
-
         List<Ec2InstanceResponse> instances = ec2Service.getInstances();
         List<CpuMetricResponse> cpuMetrics = cloudWatchService.getCpuMetrics();
         List<SecurityGroupCheckResponse> securityGroups = securityGroupService.checkSecurityGroups();
 
+        return createRecommendations(instances, cpuMetrics, securityGroups);
+    }
+
+    public List<RecommendationResponse> createRecommendations(
+            List<Ec2InstanceResponse> instances,
+            List<CpuMetricResponse> cpuMetrics,
+            List<SecurityGroupCheckResponse> securityGroups
+    ) {
+        List<RecommendationResponse> recommendations = new ArrayList<>();
+
         for (Ec2InstanceResponse instance : instances) {
-            CpuMetricResponse cpuMetric = findCpuMetric(cpuMetrics, instance.instanceId());
+            CpuMetricResponse cpuMetric = findCpuMetric(
+                    cpuMetrics,
+                    instance.instanceId(),
+                    instance.region()
+            );
+
             addEc2AndCpuRecommendations(recommendations, instance, cpuMetric);
         }
 
@@ -48,10 +61,12 @@ public class RecommendationService {
 
     private CpuMetricResponse findCpuMetric(
             List<CpuMetricResponse> cpuMetrics,
-            String instanceId
+            String instanceId,
+            String region
     ) {
         return cpuMetrics.stream()
                 .filter(cpu -> cpu.instanceId().equals(instanceId))
+                .filter(cpu -> cpu.region().equals(region))
                 .findFirst()
                 .orElse(null);
     }
@@ -169,30 +184,6 @@ public class RecommendationService {
                     createSecurityRecommendation(risk)
             ));
         }
-
-        if (securityGroup.unusedCandidate()) {
-            recommendations.add(new RecommendationResponse(
-                    "SECURITY",
-                    sgName,
-                    sgId,
-                    "MEDIUM",
-                    "미사용 Security Group 발견",
-                    "어떤 EC2 인스턴스에도 연결되어 있지 않은 Security Group입니다.",
-                    "실제로 사용하지 않는 Security Group이라면 삭제하고, 필요한 경우에만 유지하세요."
-            ));
-        }
-
-        if (securityGroup.publicIpExposed()) {
-            recommendations.add(new RecommendationResponse(
-                    "SECURITY",
-                    sgName,
-                    sgId,
-                    "MEDIUM",
-                    "Public IP 노출 위험",
-                    "Public IP가 있는 EC2 인스턴스와 연결된 Security Group입니다.",
-                    "외부 접근이 꼭 필요한 경우에만 Public IP를 유지하고, Security Group 인바운드 규칙을 최소화하세요."
-            ));
-        }
     }
 
     private String createSecurityRecommendation(SecurityGroupRisk risk) {
@@ -216,6 +207,14 @@ public class RecommendationService {
 
         if (type.contains("Elasticsearch") || type.contains("OpenSearch")) {
             return "검색 엔진 포트가 외부에 공개되어 있습니다. 인증 설정을 확인하고 내부 접근만 허용하도록 제한하세요.";
+        }
+
+        if (type.contains("PUBLIC_IP_EXPOSED")) {
+            return "외부 접근이 꼭 필요한 경우에만 Public IP를 유지하고, Security Group 인바운드 규칙을 최소화하세요.";
+        }
+
+        if (type.contains("UNUSED_SECURITY_GROUP")) {
+            return "실제로 사용하지 않는 Security Group이라면 삭제하고, 필요한 경우에만 유지하세요.";
         }
 
         return "Security Group 인바운드 규칙을 확인하고, 불필요하게 전체 공개된 접근을 제거하세요.";
