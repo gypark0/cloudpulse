@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const API_URL = "http://localhost:8080/api/dashboard";
+const API_URL = "/api/dashboard";
 
 function App() {
   const [dashboard, setDashboard] = useState({
