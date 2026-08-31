@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ec2.Ec2Client;
 import software.amazon.awssdk.services.ec2.model.Ec2Exception;
-import software.amazon.awssdk.services.ec2.model.Reservation;
+import software.amazon.awssdk.services.ec2.model.Instance;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,50 +35,57 @@ public class Ec2Service {
                             .stream()
                             .flatMap(response -> response.reservations().stream())
                             .flatMap(reservation -> reservation.instances().stream())
-                            .forEach(instance -> {
-
-                                List<String> securityGroups = instance.securityGroups()
-                                        .stream()
-                                        .map(sg -> sg.groupName())
-                                        .toList();
-
-                                String instanceName = instance.tags()
-                                        .stream()
-                                        .filter(tag -> tag.key().equals("Name"))
-                                        .map(tag -> tag.value())
-                                        .findFirst()
-                                        .orElse(null);
-
-                                String environment = instance.tags()
-                                        .stream()
-                                        .filter(tag -> tag.key().equals("Environment"))
-                                        .map(tag -> tag.value())
-                                        .findFirst()
-                                        .orElse(null);
-
-                                String publicIp = instance.publicIpAddress();
-                                boolean hasPublicIp = publicIp != null && !publicIp.isBlank();
-
-                                result.add(new Ec2InstanceResponse(
-                                        instance.instanceId(),
-                                        instanceName,
-                                        instance.state().nameAsString(),
-                                        instance.instanceTypeAsString(),
-                                        hasPublicIp,
-                                        publicIp,
-                                        securityGroups,
-                                        regionName,
-                                        instance.placement().availabilityZone(),
-                                        environment
-                                ));
-                            });
+                            .map(instance -> convertToDto(instance, regionName))
+                            .forEach(result::add);
 
                 } catch (Ec2Exception e) {
-                    System.out.println("Failed to describe instances in region: " + regionName);
+                    System.out.println(
+                            "Failed to describe instances in region: " + regionName
+                    );
                 }
             }
         }
 
         return result;
+    }
+
+    Ec2InstanceResponse convertToDto(Instance instance, String regionName) {
+
+        List<String> securityGroups = instance.securityGroups()
+                .stream()
+                .map(sg -> sg.groupName())
+                .toList();
+
+        String instanceName = instance.tags()
+                .stream()
+                .filter(tag -> tag.key().equals("Name"))
+                .map(tag -> tag.value())
+                .findFirst()
+                .orElse(null);
+
+        String environment = instance.tags()
+                .stream()
+                .filter(tag -> tag.key().equals("Environment"))
+                .map(tag -> tag.value())
+                .findFirst()
+                .orElse(null);
+
+        String publicIp = instance.publicIpAddress();
+
+        boolean hasPublicIp =
+                publicIp != null && !publicIp.isBlank();
+
+        return new Ec2InstanceResponse(
+                instance.instanceId(),
+                instanceName,
+                instance.state().nameAsString(),
+                instance.instanceTypeAsString(),
+                hasPublicIp,
+                publicIp,
+                securityGroups,
+                regionName,
+                instance.placement().availabilityZone(),
+                environment
+        );
     }
 }
