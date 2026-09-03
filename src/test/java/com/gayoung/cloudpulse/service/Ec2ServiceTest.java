@@ -15,8 +15,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class Ec2ServiceTest {
-
-    private final Ec2Service ec2Service = new Ec2Service();
+    private final Ec2ClientFactory factory = new Ec2ClientFactory();
+    private final Ec2Service ec2Service = new Ec2Service(factory);
 
     @Test
     void EC2_Instance_정보를_DTO로_정상_변환한다() {

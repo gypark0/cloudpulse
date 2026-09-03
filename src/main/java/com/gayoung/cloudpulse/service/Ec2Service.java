@@ -13,12 +13,17 @@ import java.util.List;
 @Service
 public class Ec2Service {
 
+    private final Ec2ClientFactory ec2ClientFactory;
+
+    public Ec2Service(Ec2ClientFactory ec2ClientFactory) {
+        this.ec2ClientFactory = ec2ClientFactory;
+    }
+
     public List<Ec2InstanceResponse> getInstances() {
         List<Ec2InstanceResponse> result = new ArrayList<>();
 
-        try (Ec2Client defaultClient = Ec2Client.builder()
-                .region(Region.AP_NORTHEAST_2)
-                .build()) {
+        try (Ec2Client defaultClient =
+                     ec2ClientFactory.create(Region.AP_NORTHEAST_2)) {
 
             List<String> regions = defaultClient.describeRegions()
                     .regions()
@@ -27,9 +32,8 @@ public class Ec2Service {
                     .toList();
 
             for (String regionName : regions) {
-                try (Ec2Client regionalClient = Ec2Client.builder()
-                        .region(Region.of(regionName))
-                        .build()) {
+                try (Ec2Client regionalClient =
+                             ec2ClientFactory.create(Region.of(regionName))) {
 
                     regionalClient.describeInstancesPaginator()
                             .stream()
