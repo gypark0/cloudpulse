@@ -2,21 +2,28 @@ package com.gayoung.cloudpulse.service;
 
 import com.gayoung.cloudpulse.dto.Ec2InstanceResponse;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.services.ec2.model.GroupIdentifier;
-import software.amazon.awssdk.services.ec2.model.Instance;
-import software.amazon.awssdk.services.ec2.model.InstanceState;
-import software.amazon.awssdk.services.ec2.model.InstanceStateName;
-import software.amazon.awssdk.services.ec2.model.InstanceType;
-import software.amazon.awssdk.services.ec2.model.Placement;
-import software.amazon.awssdk.services.ec2.model.Tag;
+import software.amazon.awssdk.services.ec2.model.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(MockitoExtension.class)
 class Ec2ServiceTest {
-    private final Ec2ClientFactory factory = new Ec2ClientFactory();
-    private final Ec2Service ec2Service = new Ec2Service(factory);
+    @Mock
+    private Ec2ClientFactory factory;
+
+    private Ec2Service ec2Service;
+
+    @BeforeEach
+    void setUp() {
+        ec2Service = new Ec2Service(factory);
+    }
 
     @Test
     void EC2_Instance_정보를_DTO로_정상_변환한다() {
